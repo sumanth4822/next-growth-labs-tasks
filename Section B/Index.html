@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lazy Loading Posts</title>
+    <style>
+
+        .post {
+            margin: 20px;
+            padding: 10px;
+            border: 1px solid #ccc;
+        }
+        #loadingIndicator {
+            text-align: center;
+            display: none;
+        }
+
+        .loader {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #3498db;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 2s linear infinite;
+            margin: 0 auto;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <h1>POSTS</h1>
+    <div id="postContainer"></div>
+    <div id="loadingIndicator"><div class="loader"></div>Loading.....</div>
+
+    <script>
+        let page = 1;
+        let isLoading = false;
+        let postsDisplayed = 0;
+
+        function fetchData(url, callback) {
+            var xhr = new XMLHttpRequest();
+            xhr.open("GET", url, true);
+            xhr.onreadystatechange = function () {
+                if (xhr.readyState === 4) {
+                    if (xhr.status === 200) {
+                        try {
+                            const responseData = JSON.parse(xhr.responseText);
+                            callback(responseData.posts);
+                        } catch (error) {
+                            console.error('Error parsing JSON data:', error);
+                        }
+                    } else {
+                        console.error('Error fetching data:', xhr.statusText);
+                    }
+                }
+            };
+            xhr.send();
+        }
+
+        function displayPosts(posts) {
+            var postContainer = document.getElementById("postContainer");
+            var loadingIndicator = document.getElementById("loadingIndicator");
+
+            if (Array.isArray(posts)) {
+                posts.slice(postsDisplayed, postsDisplayed + 5).forEach(function (post) {
+                    var postDiv = document.createElement("div");
+                    postDiv.className = "post";
+                    postDiv.innerHTML = `
+                        <h2>${post.title}</h2>
+                        <p>${post.body}</p>
+                    `;
+                    postContainer.appendChild(postDiv);
+                });
+                postsDisplayed += 5;
+            } else {
+                console.error('Received data is not an array:', posts);
+            }
+
+            loadingIndicator.style.display = "none"; // Hide the loader after posts are displayed
+        }
+
+        function loadMorePosts() {
+            if (isLoading) {
+                return;
+            }
+
+            const windowHeight = window.innerHeight;
+            const documentHeight = document.documentElement.scrollHeight;
+            const scrollPosition = window.scrollY;
+
+            if (windowHeight + scrollPosition >= documentHeight - 1) {
+                isLoading = true;
+                const loadingIndicator = document.getElementById("loadingIndicator");
+                loadingIndicator.style.display = "block"; // Display the loader when loading more posts
+                page++;
+
+                const apiUrl = `https://dummyjson.com/posts?page=${page}`;
+                fetchData(apiUrl, function (data) {
+                    displayPosts(data);
+                    isLoading = false;
+                });
+            }
+        }
+
+        window.addEventListener("scroll", loadMorePosts);
+        loadMorePosts();
+    </script>
+</body>
+</html>
